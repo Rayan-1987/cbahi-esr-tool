@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CBAHI ESR — أداة التقييم الذاتي | ESR Self-Assessment Tool (GitHub Static)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --ink:#10333B; --bg:#F2F6F6; --card:#FFFFFF; --line:#DCE7E8;
+  --teal:#12868D; --teal-dk:#0C6167; --orange:#E56A2E;
+  --green:#1F8F5F; --green-bg:#E4F3EC;
+  --amber:#D9940F; --amber-bg:#FBF1DC;
+  --red:#C4403C; --red-bg:#F9E7E6;
+  --na:#62797F; --na-bg:#EBF0F0;
+  --muted:#5E7378; --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.6}
+.mono{font-family:'IBM Plex Mono',monospace;direction:ltr;display:inline-block}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* Header */
+header{background:var(--ink);color:#fff;padding:26px 0 22px;border-bottom:4px solid var(--orange)}
+.head-grid{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+.head-txt{flex:1;min-width:260px}
+.eyebrow{color:var(--orange);font-weight:600;font-size:12px;letter-spacing:.06em;margin-bottom:4px}
+h1{font-size:24px;font-weight:700;line-height:1.35}
+.sub-en{color:#9FBCC0;font-size:13px;margin-top:4px;direction:ltr;text-align:right}
+.meta-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.meta-row input{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);color:#fff;border-radius:8px;padding:7px 12px;font:inherit;font-size:13px;min-width:200px}
+.meta-row input::placeholder{color:#8FAAAE}
+.donut-box{display:flex;align-items:center;gap:16px}
+.donut{width:118px;height:118px}
+.donut .track{stroke:rgba(255,255,255,.14)}
+.donut .val{stroke:var(--orange);stroke-linecap:round;transition:stroke-dasharray .5s ease}
+.donut text{fill:#fff;font-family:'IBM Plex Mono',monospace}
+.donut-lbl{font-size:12px;color:#9FBCC0}
+.donut-lbl b{display:block;color:#fff;font-size:13px}
+.counts{display:grid;grid-template-columns:repeat(2,auto);gap:4px 18px;font-size:12.5px;color:#C8D9DB}
+.counts b{font-family:'IBM Plex Mono',monospace;font-size:14px;color:#fff;margin-inline-start:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-inline-end:6px}
+
+/* Chapter dashboard */
+.dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px;margin:20px 0}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.chip:hover,.chip.active{border-color:var(--teal)}
+.chip.active{box-shadow:0 0 0 1px var(--teal)}
+.chip-top{display:flex;justify-content:space-between;align-items:baseline}
+.chip-code{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;color:var(--teal-dk)}
+.chip-pct{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px}
+.chip-name{font-size:12.5px;color:var(--muted);margin:2px 0 8px}
+.bar{height:6px;background:#E7EEEE;border-radius:4px;overflow:hidden;display:flex}
+.bar i{height:100%}
+.chip-cnt{font-size:11px;color:var(--muted);margin-top:6px;font-family:'IBM Plex Mono',monospace;direction:ltr;text-align:right}
+
+/* Toolbar */
+.toolbar{position:sticky;top:0;z-index:30;background:var(--bg);padding:10px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+.toolbar input[type=search]{flex:1;min-width:180px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font:inherit;background:#fff}
+.toolbar select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;background:#fff;color:var(--ink)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink)}
+.btn:hover{border-color:var(--teal);color:var(--teal-dk)}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.primary:hover{background:var(--teal-dk);color:#fff}
+.save-note{font-size:11.5px;color:var(--muted);margin-inline-start:auto}
+.save-note.flash{color:var(--green);font-weight:600}
+
+/* Standards */
+.std{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin:14px 0;overflow:hidden}
+.std-head{display:flex;gap:14px;align-items:center;padding:13px 16px;cursor:pointer;background:#FBFDFD;border-bottom:1px solid var(--line)}
+.std-head:hover{background:#F4F9F9}
+.std-code{font-family:'IBM Plex Mono',monospace;font-weight:600;color:#fff;background:var(--teal);border-radius:6px;padding:3px 10px;font-size:13px;white-space:nowrap}
+.std-title{flex:1;font-weight:600;font-size:14px;direction:ltr;text-align:left}
+.std-mini{width:120px;flex:none}
+.std-pct{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;width:52px;text-align:left;direction:ltr}
+.caret{transition:transform .2s;color:var(--muted);font-size:12px}
+.std.open .caret{transform:rotate(90deg)}
+.std-body{display:none}
+.std.open .std-body{display:block}
+
+.item{display:grid;grid-template-columns:86px 1fr 320px;gap:14px;padding:14px 16px;border-bottom:1px solid #EEF3F3;align-items:start}
+.item:last-child{border-bottom:none}
+.item.s-met{border-inline-start:3px solid var(--green)}
+.item.s-partial{border-inline-start:3px solid var(--amber)}
+.item.s-notmet{border-inline-start:3px solid var(--red)}
+.item.s-na{border-inline-start:3px solid var(--na)}
+.it-code{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12.5px;color:var(--teal-dk);direction:ltr;text-align:left;padding-top:2px}
+.freq{display:block;margin-top:6px;background:#FDEFE6;color:var(--orange);border-radius:5px;font-size:10.5px;font-weight:600;padding:2px 6px;text-align:center;direction:rtl}
+.it-text{font-size:13px;direction:ltr;text-align:left;color:#22454D}
+.it-text .els{color:var(--muted);font-size:12px;margin-top:4px;padding-left:12px}
+.it-ctrl{display:flex;flex-direction:column;gap:7px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;border:none;background:#fff;padding:6px 2px;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;color:var(--muted);border-inline-start:1px solid var(--line)}
+.seg button:first-child{border-inline-start:none}
+.seg button.on-met{background:var(--green);color:#fff}
+.seg button.on-partial{background:var(--amber);color:#fff}
+.seg button.on-notmet{background:var(--red);color:#fff}
+.seg button.on-na{background:var(--na);color:#fff}
+.it-ctrl input,.it-ctrl textarea{border:1px solid var(--line);border-radius:7px;padding:6px 10px;font:inherit;font-size:12.5px;width:100%;background:#fff}
+.it-ctrl textarea{resize:vertical;min-height:32px}
+.it-ctrl input:focus,.it-ctrl textarea:focus,.toolbar input:focus{outline:2px solid var(--teal);outline-offset:-1px;border-color:var(--teal)}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:10px 0 4px}
+footer{margin:34px 0 26px;color:var(--muted);font-size:12px;text-align:center;line-height:1.9}
+.empty{background:#fff;border:1px dashed var(--line);border-radius:var(--radius);padding:30px;text-align:center;color:var(--muted);margin:20px 0}
+
+@media(max-width:860px){
+  .item{grid-template-columns:1fr}
+  .it-code{padding-top:0}
+  .std-mini{display:none}
+  h1{font-size:19px}
+}
+@media print{
+  .toolbar,.dash,.meta-row,footer .btn{display:none}
+  header{background:#fff;color:var(--ink)}
+  .std{break-inside:avoid}
+}
+
+/* Login & sync */
+#loginOverlay{position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.login-card{background:#fff;border-radius:14px;padding:34px 30px;width:min(92vw,360px);display:flex;flex-direction:column;gap:10px;text-align:center;border-top:4px solid var(--orange)}
+.login-card h2{font-size:20px;color:var(--ink)}
+.login-card p{font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.login-card input{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit}
+.login-card input:focus{outline:2px solid var(--teal);outline-offset:-1px}
+.login-card .btn{padding:10px;font-size:14px}
+.login-err{color:var(--red);font-size:12.5px;min-height:18px}
+.user-chip{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.user-chip b{color:var(--ink)}
+.upd{font-size:10.5px;color:var(--muted);text-align:left;direction:ltr}
+.save-note.err{color:var(--red);font-weight:600}
+.save-note.busy{color:var(--amber);font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head-grid">
+    <div class="head-txt">
+      <div class="eyebrow">CBAHI · المركز السعودي لاعتماد المنشآت الصحية</div>
+      <h1>أداة التقييم الذاتي لمتطلبات السلامة الأساسية (ESR)</h1>
+      <div class="sub-en">Essential Safety Requirements — 20 Standards · 113 Sub-Standards · Static GitHub Version</div>
+      <div class="meta-row">
+        <input id="mHosp" placeholder="اسم المستشفى / Hospital">
+        <input id="mAssessor" placeholder="المقيّم / Assessor">
+        <input id="mDate" type="date" title="تاريخ التقييم">
+      </div>
+    </div>
+    <div class="donut-box">
+      <svg class="donut" viewBox="0 0 120 120" aria-label="نسبة الامتثال الإجمالية">
+        <circle class="track" cx="60" cy="60" r="50" fill="none" stroke-width="11"/>
+        <circle class="val" id="donutVal" cx="60" cy="60" r="50" fill="none" stroke-width="11"
+                stroke-dasharray="0 314.16" transform="rotate(-90 60 60)"/>
+        <text id="donutPct" x="60" y="58" text-anchor="middle" font-size="24" font-weight="600">0%</text>
+        <text x="60" y="76" text-anchor="middle" font-size="9" fill="#9FBCC0">Compliance</text>
+      </svg>
+      <div>
+        <div class="donut-lbl"><b>نسبة الامتثال الإجمالية</b>Met = 1 · Partial = 0.5 · NA مستبعد</div>
+        <div class="counts" style="margin-top:8px">
+          <span><i class="dot" style="background:var(--green)"></i>ممتثل<b id="cMet">0</b></span>
+          <span><i class="dot" style="background:var(--amber)"></i>جزئي<b id="cPartial">0</b></span>
+          <span><i class="dot" style="background:var(--red)"></i>غير ممتثل<b id="cNotmet">0</b></span>
+          <span><i class="dot" style="background:var(--na)"></i>لا ينطبق<b id="cNa">0</b></span>
+          <span><i class="dot" style="background:#3E5A61"></i>لم يُقيَّم<b id="cPending">0</b></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="dash" id="dash"></div>
+
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="بحث بالكود أو النص… / Search code or text">
+    <select id="fStatus">
+      <option value="">كل الحالات</option>
+      <option value="met">ممتثل Met</option>
+      <option value="partial">جزئي Partially Met</option>
+      <option value="notmet">غير ممتثل Not Met</option>
+      <option value="na">لا ينطبق NA</option>
+      <option value="pending">لم يُقيَّم</option>
+    </select>
+    <button class="btn primary" onclick="exportXlsx()">⬇ تصدير Excel</button>
+    <button class="btn" onclick="exportBackup()">نسخة احتياطية JSON</button>
+    <button class="btn" onclick="document.getElementById('importFile').click()">استيراد JSON</button>
+    <button class="btn" onclick="window.print()">طباعة</button>
+    <button class="btn" onclick="resetAll()">مسح التقييم</button>
+    <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importBackup(event)">
+    <span class="save-note" id="saveBadge">✓ محفوظ محلياً</span>
+  </div>
+
+  <div class="legend">
+    <span>اضغط على بطاقة الفصل أعلاه لتصفية المعايير</span>
+    <span>·</span>
+    <span>شارة <b style="color:var(--orange)">دوري</b> = متطلب مراقبة مستمرة (المرحلة 2)</span>
+  </div>
+
+  <div id="list"></div>
+  <div class="empty" id="empty" style="display:none">لا توجد معايير مطابقة لهذا الفلتر.</div>
+
+  <footer>
+    CBAHI Essential Safety Requirements (ESR) — Self-Assessment Tool · نسخة Static للنشر على GitHub Pages<br>
+    البيانات تُحفظ محلياً داخل متصفح المستخدم عبر localStorage. استخدم تصدير/استيراد JSON لنقل أو حفظ نسخة احتياطية.
+  </footer>
+</div>
+
+<script>
+/* ================= Chapters & Standards ================= */
+const CHAPTERS = {
+  HR:{ar:"الموارد البشرية",en:"Human Resources"},
+  MS:{ar:"الكادر الطبي",en:"Medical Staff"},
+  PC:{ar:"رعاية المرضى",en:"Provision of Care"},
+  QM:{ar:"إدارة الجودة",en:"Quality Management"},
+  AN:{ar:"التخدير",en:"Anesthesia"},
+  IPC:{ar:"مكافحة العدوى",en:"Infection Prevention & Control"},
+  MM:{ar:"إدارة الأدوية",en:"Medication Management"},
+  LB:{ar:"المختبر وبنك الدم",en:"Laboratory & Blood Bank"},
+  FMS:{ar:"سلامة المرافق",en:"Facility Management & Safety"}
+};
+const STANDARDS = {
+  "HR.5":"The hospital has a process for proper credentialing of staff members licensed to provide patient care.",
+  "MS.7":"Medical staff members have current delineated clinical privileges.",
+  "PC.25":"Policies and procedures guide the handling, use, and administration of blood and blood products.",
+  "PC.26":"Patients at risk for developing venous thromboembolism are identified and managed.",
+  "QM.17":"The hospital has a process to ensure correct identification of patients.",
+  "QM.18":"The hospital has a process to prevent wrong patient, wrong site, and wrong surgery/procedure.",
+  "AN.2":"Anesthesia staff members have the appropriate qualifications.",
+  "AN.15":"Qualified staff perform moderate and deep sedation/analgesia.",
+  "IPC.4":"There is a designated multidisciplinary committee that provides oversight of the infection prevention and control program.",
+  "IPC.15":"Facility design and available supplies support isolation practices.",
+  "MM.5":"The hospital has a system for the safety of high-alert medications.",
+  "MM.6":"The hospital has a system for the safety of look-alike and sound-alike (LASA) medications.",
+  "MM.41":"The hospital has a process for monitoring, identifying, and reporting significant medication errors, including near misses, hazardous conditions, and at-risk behaviors that have the potential to cause patient harm.",
+  "LB.51":"The blood bank develops a process to prevent disease transmission by blood/platelet transfusion.",
+  "FMS.9":"The hospital ensures that all its occupants are safe from radiation hazards.",
+  "FMS.21":"The hospital has an effective fire alarm system.",
+  "FMS.22":"The hospital has a fire suppression system available in the required area(s).",
+  "FMS.23":"There are fire exits that are properly located in the hospital.",
+  "FMS.24":"The hospital and its occupants are safe from fire and smoke.",
+  "FMS.32":"The hospital ensures proper maintenance of the medical gas system."
+};
+/* Each item: c=code, s=standard, t=text, e=[elements], f=frequency badge */
+const ITEMS = [
+{c:"HR.5.1",s:"HR.5",t:"The hospital has a written policy describing the process used for the verification of credentials."},
+{c:"HR.5.2",s:"HR.5",t:"The hospital gathers, verifies, and evaluates the credentials (license, education, training, certification and experience) of those medical staff, nursing staff, and other health professionals licensed to provide patient care."},
+{c:"HR.5.3",s:"HR.5",t:"Credentials are verified from the original source."},
+{c:"HR.5.4",s:"HR.5",t:"Job responsibilities and clinical work assignments/privileges are based on the evaluation of the verified credentials."},
+{c:"HR.5.5",s:"HR.5",t:"The hospital ensures the registration of all healthcare professionals with the Saudi Commission for Health Specialties."},
+{c:"HR.5.6",s:"HR.5",t:"Staff licensed to provide patient care must always have and maintain a valid license to practice only within their profession."},
+{c:"HR.5.7",s:"HR.5",t:"The hospital maintains an updated record of the current professional license, certificate, or registration, when required by laws, regulations, or by the hospital for every medical staff, nursing staff and other healthcare professionals."},
+{c:"HR.5.8",s:"HR.5",t:"When verification of credentials is conducted through a third party, the hospital must request for a confirmatory documentation."},
+{c:"HR.5.9",s:"HR.5",t:"Verification process applies to all clinical staff categories (full time, part time, visitor, and locum)."},
+{c:"MS.7.1",s:"MS.7",t:"Medical staff members are allowed to practice only within the privileges granted by the credentialing and privileging committee."},
+{c:"MS.7.2",s:"MS.7",t:"Clinical privileges are reviewed and updated every two years and as needed.",f:"كل سنتين"},
+{c:"MS.7.3",s:"MS.7",t:"The hospital identifies the circumstances under which temporary or emergency privileges are granted."},
+{c:"MS.7.4",s:"MS.7",t:"Temporary or emergency privileges are not granted for more than 90 days and are not renewable."},
+{c:"MS.7.5",s:"MS.7",t:"When a new privilege is requested by a medical staff member, the relevant credentials are verified and evaluated prior to approval."},
+{c:"PC.25.1",s:"PC.25",t:"There are policies and procedures that are developed collaboratively by the blood utilization committee, guiding the handling, use, and administration of blood and blood products."},
+{c:"PC.25.2",s:"PC.25",t:"Only physicians order blood and in accordance with a policy clarifying when blood and blood products may be ordered."},
+{c:"PC.25.3",s:"PC.25",t:"The physician obtains informed consent for transfusion of blood and blood products. Elements of patient consent include:",e:["PC.25.3.1 Description of the transfusion process.","PC.25.3.2 Identification of the risks and benefits of the transfusion.","PC.25.3.3 Identification of alternatives including the consequences of refusing the treatment.","PC.25.3.4 Giving the opportunity to ask questions.","PC.25.3.5 Giving the right to accept or refuse the transfusion."]},
+{c:"PC.25.4",s:"PC.25",t:"Two staff members verify the patient's identity prior to blood drawing for cross match and prior to the administration of blood."},
+{c:"PC.25.5",s:"PC.25",t:"In dire emergencies, patient/family signs consent for \"transfusion without NAT testing\"."},
+{c:"PC.25.6",s:"PC.25",t:"Blood is transfused according to accepted transfusion practices from recognized professional organizations."},
+{c:"PC.25.7",s:"PC.25",t:"Policies and procedures guide the administration of blood transfusions."},
+{c:"PC.25.8",s:"PC.25",t:"Patients receiving blood are closely monitored."},
+{c:"PC.25.9",s:"PC.25",t:"Transfusion reactions are reported and analyzed for preventive and corrective actions."},
+{c:"PC.25.10",s:"PC.25",t:"Side effects or complications are immediately reported to the medical staff and blood bank and the transfused unit is sent to the blood bank for further investigations."},
+{c:"PC.26.1",s:"PC.26",t:"Patients are screened for the risk of developing venous thromboembolism."},
+{c:"PC.26.2",s:"PC.26",t:"Patients at risk receive prophylaxis according to current evidence-based practice."},
+{c:"QM.17.1",s:"QM.17",t:"At least two patient identifiers (e.g., patient full name and medical record number) are required whenever taking blood samples, administering medications or blood products, or performing procedures."},
+{c:"QM.17.2",s:"QM.17",t:"The hospital has a standardized approach to patient identification (e.g., use of ID bands with standardized information)."},
+{c:"QM.17.3",s:"QM.17",t:"Patients are actively involved in the process of patient identification."},
+{c:"QM.18.1",s:"QM.18",t:"There is a process implemented to prevent wrong patient, wrong site, and wrong surgery/procedure during all invasive interventions performed in operating rooms or other locations."},
+{c:"QM.18.2",s:"QM.18",t:"The process consists of three phases: verification, site marking, and time out."},
+{c:"QM.18.3",s:"QM.18",t:"A pre-procedure verification of the patient information is carried out including the patient's identity, consent, full details of the procedure, laboratory tests and images, and any implant or prosthesis."},
+{c:"QM.18.4",s:"QM.18",t:"The surgical/procedural site is marked before conducting the surgery/procedure.",e:["QM.18.4.1 The site is marked especially in bilateral organs and multiple structures (e.g. fingers, toes, and spine).","QM.18.4.2 The site is marked by the individual who will perform the procedure.","QM.18.4.3 The patient is involved in the marking process.","QM.18.4.4 The marking method is consistent throughout the hospital.","QM.18.4.5 The mark is visible after the patient is prepped and draped."]},
+{c:"QM.18.5",s:"QM.18",t:"A final check (time-out) is conducted before the procedure is initiated.",e:["QM.18.5.1 The time-out is conducted in the location where the procedure will be done, just before starting.","QM.18.5.2 The time-out is initiated by a designated member of the team and involves the members of the team, including the individual performing the procedure, the anesthesia providers, and the nurse(s) involved.","QM.18.5.3 The entire procedure team uses active communication during the time out.","QM.18.5.4 During the time-out, the team members agree on the correct patient identity, the correct procedure to be performed, the correct site, and when applicable, the availability of the correct implant or equipment."]},
+{c:"QM.18.6",s:"QM.18",t:"The hospital documents its processes for preventing wrong patient, wrong site, and wrong surgery/procedure."},
+{c:"AN.2.1",s:"AN.2",t:"Qualified anesthesiologists provide anesthesia services."},
+{c:"AN.2.2",s:"AN.2",t:"Qualified anesthesiologist is present inside the operating room throughout the operation."},
+{c:"AN.2.3",s:"AN.2",t:"Anesthesia consultant administers and supervises anesthesia for major/specialized operations or high risk patients, including:",e:["AN.2.3.1 Pediatric operations.","AN.2.3.2 Cardio-pulmonary operations.","AN.2.3.3 Neurosurgery operations.","AN.2.3.4 Transplant operations."]},
+{c:"AN.2.4",s:"AN.2",t:"Anesthesia staff are certified in advanced life support as appropriate to the patient's age."},
+{c:"AN.15.1",s:"AN.15",t:"Physicians who perform moderate and deep sedation/analgesia have competency-based privileges granted to perform moderate and deep sedation/analgesia."},
+{c:"AN.15.2",s:"AN.15",t:"Clinical staff who participate in caring for patients receiving moderate or deep sedation are certified in advanced life support as appropriate to the age of the patients served."},
+{c:"AN.15.3",s:"AN.15",t:"Clinical staff who participate in conducting sedation must successfully complete a proper education/training on moderate and deep sedation."},
+{c:"IPC.4.1",s:"IPC.4",t:"The infection prevention and control committee is chaired by the hospital director or the medical director."},
+{c:"IPC.4.2",s:"IPC.4",t:"The membership of the infection prevention and control committee includes representatives from the medical staff, nursing staff, microbiology, operating room, central sterilization service, pharmaceutical care, dietary services, housekeeping, infection prevention and control staff, and other departments as needed."},
+{c:"IPC.4.3",s:"IPC.4",t:"The infection prevention and control committee meets on a regular basis (at least quarterly).",f:"ربع سنوي"},
+{c:"IPC.4.4",s:"IPC.4",t:"Functions of the infection prevention and control committee include, but are not limited to, the following:",e:["IPC.4.4.1 Review of the hospital infection prevention and control policies and procedures.","IPC.4.4.2 Review of the reports of healthcare-associated infections surveillance submitted regularly by the infection prevention and control team and suggestion of appropriate actions.","IPC.4.4.3 Revision of the yearly plan submitted by infection prevention and control team and suggestion of additions/changes if necessary.","IPC.4.4.4 Evaluates and revises on a continuous basis the procedures & the mechanisms developed by the infection prevention & control team to serve established standards and goals.","IPC.4.4.5 Brings to the attention of the infection prevention & control team new infection control issues arising in different departments of the hospital & suggests solutions.","IPC.4.4.6 Each member of the committee acts as an advocate of infection prevention & control in his department, trying to promote its principles, and ensures application of its rules."]},
+{c:"IPC.15.1",s:"IPC.15",t:"There is at least one negative pressure airborne isolation room in the emergency room and one in patient care areas (one negative pressure room for every 25-30 beds in general hospitals)."},
+{c:"IPC.15.2",s:"IPC.15",t:"The infection prevention and control team decides the need for more airborne isolation rooms depending on the volume of patients in need for airborne isolation admitted to the hospital."},
+{c:"IPC.15.3",s:"IPC.15",t:"The ventilation system serving airborne isolation facilities provides pressure patterns that prevent airborne pathogens from being distributed to other areas of the hospital.",e:["IPC.15.3.1 Rooms designed for airborne isolation patients are under negative pressure.","IPC.15.3.2 Air is exhausted to the outside and is not re-circulated unless it is filtered through High-Efficiency Particulate Air (HEPA) Filter.","IPC.15.3.3 There is evidence of daily air exchange monitoring (12 air changes per hour) when a patient is isolated. Weekly monitoring of the air exchange is needed when no patient is isolated."],f:"يومي / أسبوعي"},
+{c:"IPC.15.4",s:"IPC.15",t:"The entry of the isolation room is through a work area or ante-room that serves as a site for hand washing, gowning and storage of protective clothing (gloves, aprons, masks)."},
+{c:"IPC.15.5",s:"IPC.15",t:"Toilet, shower, or tub and hand washing facilities are provided for each isolation room."},
+{c:"IPC.15.6",s:"IPC.15",t:"Transmission-based precaution cards (isolation signs) are consistent with the patient diagnosis and are posted in Arabic and English and indicate the type of precautions required.",e:["IPC.15.6.1 Transmission-based precaution cards (isolation signs) are color coded for isolation of different categories (e.g., contact: green, airborne: blue, droplet: pink or red).","IPC.15.6.2 Transmission-based precaution cards (isolation signs) should contain short statements and supported with the required figures.","IPC.15.6.3 Isolation instructions must highlight the transmission-based precaution cards (isolation signs) needed while transporting the patients under transmission-based precautions to other department (e.g., radiology)."]},
+{c:"IPC.15.7",s:"IPC.15",t:"Respirator (high filtration) masks (N-95, N-99) are used by staff during direct care of patients on airborne precautions and are available on all units likely to admit patients on airborne precautions."},
+{c:"IPC.15.8",s:"IPC.15",t:"Respirator (high filtration) masks (N95, N-99) can be reused by the same patient care giver as per the period specified by the manufacturer."},
+{c:"MM.5.1",s:"MM.5",t:"There is a written multidisciplinary plan for managing high-alert medications and hazardous pharmaceutical chemicals. It includes identification, location, labeling, storage, dispensing, and administration of high-alert medications."},
+{c:"MM.5.2",s:"MM.5",t:"The hospital identifies an annually updated list of high-alert medications and hazardous pharmaceutical chemicals based on its own data and national and international recognized organizations (e.g., Institute of Safe Medication Practice, World Health Organization). The list contains, but is not limited to, the following:",e:["MM.5.2.1 Controlled and narcotics medications.","MM.5.2.2 Neuromuscular blockers.","MM.5.2.3 Chemotherapeutic agents.","MM.5.2.4 Concentrated electrolytes (e.g., hypertonic sodium chloride, concentrated potassium salts).","MM.5.2.5 Antithrombotic medications (e.g., heparin, warfarin).","MM.5.2.6 Insulins.","MM.5.2.7 Anesthetic medications (e.g., propofol, ketamine).","MM.5.2.8 Investigational (research) drugs, as applicable.","MM.5.2.9 Other medications as identified by the hospital."],f:"سنوي"},
+{c:"MM.5.3",s:"MM.5",t:"The hospital plan for managing high-alert medications and hazardous pharmaceutical chemicals is implemented. This includes, but is not limited to, the following:",e:["MM.5.3.1 Improving access to information about high-alert medications.","MM.5.3.2 Limiting access to high-alert medications.","MM.5.3.3 Using auxiliary labels or computerized alerts if available.","MM.5.3.4 Standardizing the ordering, transcribing, preparation, dispensing, administration, and monitoring of high-alert medications.","MM.5.3.5 Employing independent double checks."]},
+{c:"MM.5.4",s:"MM.5",t:"The hospital develops and implements standard concentrations for all medications administered by intravenous infusion."},
+{c:"MM.6.1",s:"MM.6",t:"There is a multidisciplinary policy and procedure on handling look-alike/sound-alike (LASA) medications."},
+{c:"MM.6.2",s:"MM.6",t:"The hospital reviews and revises annually its list of confusing drug names, which include LASA medication name pairs that the hospital stores, dispenses, and administers.",f:"سنوي"},
+{c:"MM.6.3",s:"MM.6",t:"The hospital takes actions to prevent errors involving LASA medications including the following, as applicable:",e:["MM.6.3.1 Providing education on LASA medications to healthcare professionals at orientation and as part of continuing education.","MM.6.3.2 Using both the brand and generic names for prescribing LASA medications.","MM.6.3.3 Writing the diagnosis/indication of the LASA medication on the prescription.","MM.6.3.4 Changing the appearance of look-alike product package.","MM.6.3.5 Reading carefully the label each time a medication is accessed, and/or prior to administration.","MM.6.3.6 Minimizing the use of verbal and telephone orders.","MM.6.3.7 Checking the purpose/indication of the medication on the prescription prior to dispensing and administering.","MM.6.3.8 Placing LASA medications in locations separate from each other or in non-alphabetical order."]},
+{c:"MM.41.1",s:"MM.41",t:"There is a multidisciplinary policy and procedure on handling medication errors, near misses, and hazardous situations (e.g., confusion over look-alike/sound-alike drugs or similar packaging)."},
+{c:"MM.41.2",s:"MM.41",t:"The policy has a clear and acceptable definition of significant medication error, near misses, and hazardous situations."},
+{c:"MM.41.3",s:"MM.41",t:"The treating physician is notified of the medication error at the appropriate time."},
+{c:"MM.41.4",s:"MM.41",t:"Medication error reporting is completed within the specified time frame after discovery of the error."},
+{c:"MM.41.5",s:"MM.41",t:"The hospital has a standard format for reporting medication errors."},
+{c:"MM.41.6",s:"MM.41",t:"Staff are educated on the process and importance of medication error reporting."},
+{c:"MM.41.7",s:"MM.41",t:"There is active reporting of medication errors, near misses, and hazardous situations."},
+{c:"MM.41.8",s:"MM.41",t:"The hospital conducts intensive root-cause analysis for all significant or potentially significant medication errors."},
+{c:"MM.41.9",s:"MM.41",t:"Medication errors, near misses, and hazardous situations are documented in the patient's medical record."},
+{c:"MM.41.10",s:"MM.41",t:"The hospital utilizes reported data to improve the medication use process, prevent medication errors, and improve patient safety."},
+{c:"MM.41.11",s:"MM.41",t:"Healthcare professionals are provided with feedback on reported medication errors, near misses, and hazardous situations."},
+{c:"MM.41.12",s:"MM.41",t:"The hospital reports sentinel events related to serious medication errors to the relevant authorities."},
+{c:"LB.51.1",s:"LB.51",t:"There are policies and procedures mandating that a sample of blood obtained from the donor during blood/blood component collection is subjected to the following infectious diseases testing:",e:["LB.51.1.1 HBsAg.","LB.51.1.2 Anti-HBc.","LB.51.1.3 Anti-HCV.","LB.51.1.4 Anti-HIV-1/2.","LB.51.1.5 Anti-HTLV-I/II.","LB.51.1.6 HIV-1 RNA.","LB.51.1.7 HCV RNA.","LB.51.1.8 HBV DNA.","LB.51.1.9 Serological test for syphilis.","LB.51.1.10 Other additional or supplemental tests as mandated by relevant health authorities."]},
+{c:"LB.51.2",s:"LB.51",t:"The blood bank has a process to limit and detect bacterial contamination in platelet components. The process:",e:["LB.51.2.1 Describes the blood bank approach to limit bacterial contamination and the investigations of positive cases.","LB.51.2.2 Ensures the employed detection method is sensitive enough to detect significant bacterial contamination."]},
+{c:"FMS.9.1",s:"FMS.9",t:"The hospital has a radiation safety policy and procedure and it is implemented."},
+{c:"FMS.9.2",s:"FMS.9",t:"All radio-active materials are clearly labeled and safely and securely stored."},
+{c:"FMS.9.3",s:"FMS.9",t:"The hospital has the relevant valid license(s) from King Abdulaziz City for Science and Technology."},
+{c:"FMS.9.4",s:"FMS.9",t:"Staff handling nuclear materials are qualified and certified by King Abdul-Aziz City for Science and Technology."},
+{c:"FMS.9.5",s:"FMS.9",t:"There is a valid shielding certificate of the x-ray room(s) including regular test to ensure permissible radiation levels."},
+{c:"FMS.9.6",s:"FMS.9",t:"Lead aprons and gonad/thyroid shields are available to cover patients and staff needs and are annually tested according to a hospital-wide inventory.",f:"سنوي"},
+{c:"FMS.9.7",s:"FMS.9",t:"Personal radiation dosimeters (TLD cards) are available, tested every 3 months, and actions taken when test results exceed permissible levels.",f:"كل 3 أشهر"},
+{c:"FMS.21.1",s:"FMS.21",t:"There is a fire alarm system that is functioning and regularly inspected as per civil defense guidelines.",f:"دوري"},
+{c:"FMS.21.2",s:"FMS.21",t:"The fire alarm system testing results are documented."},
+{c:"FMS.21.3",s:"FMS.21",t:"The fire alarm system has preventive maintenance.",f:"دوري"},
+{c:"FMS.21.4",s:"FMS.21",t:"The elevators are connected to the fire alarm system."},
+{c:"FMS.22.1",s:"FMS.22",t:"The hospital has a functional sprinkler system."},
+{c:"FMS.22.2",s:"FMS.22",t:"The hospital has clean agent suppression system."},
+{c:"FMS.22.3",s:"FMS.22",t:"The hospital has wet chemical system."},
+{c:"FMS.22.4",s:"FMS.22",t:"The hospital has stand pipes and hose system."},
+{c:"FMS.23.1",s:"FMS.23",t:"Fire exits are available and are properly located in the hospital."},
+{c:"FMS.23.2",s:"FMS.23",t:"Fire exits are not locked."},
+{c:"FMS.23.3",s:"FMS.23",t:"Fire exits are not obstructed."},
+{c:"FMS.23.4",s:"FMS.23",t:"Fire exits have panic hardware."},
+{c:"FMS.23.5",s:"FMS.23",t:"Fire exits are fire resistant."},
+{c:"FMS.23.6",s:"FMS.23",t:"Fire exits are clearly marked with illuminated exit sign."},
+{c:"FMS.24.1",s:"FMS.24",t:"The hospital implements a strict \"No Smoking\" policy."},
+{c:"FMS.24.2",s:"FMS.24",t:"There are no obstructions to exits, fire extinguishers, fire alarm boxes, emergency blankets, safety showers, and eye wash stations."},
+{c:"FMS.24.3",s:"FMS.24",t:"Emergency lighting is adequate for safe evacuation of the hospital."},
+{c:"FMS.24.4",s:"FMS.24",t:"Storage areas are properly and safely organized:",e:["FMS.24.4.1 Shelves and racks are sturdy and in good condition.","FMS.24.4.2 No items stored directly on the floor (a minimum of ten centimeters is left to manage spills).","FMS.24.4.3 Items should be stacked on a flat base.","FMS.24.4.4 Heavier objects are close to the floor and lighter/smaller objects are higher.","FMS.24.4.5 Items are not stacked so high to block sprinklers or come in contact with overhead lights or pipes (a minimum distance of fifty centimeters from ceiling level)."]},
+{c:"FMS.24.5",s:"FMS.24",t:"Fire rated doors are available according to the hospital zones with no separation between walls and ceiling to prevent smoke spread between rooms and areas."},
+{c:"FMS.32.1",s:"FMS.32",t:"The medical gas system is regularly tested for:",e:["FMS.32.1.1 Pressure.","FMS.32.1.2 Leaks.","FMS.32.1.3 Functionality of valves, alarms, pressure gauge, and switches."],f:"دوري"},
+{c:"FMS.32.2",s:"FMS.32",t:"There is a policy and procedure that ensures effective use of medical gas system. Areas covered include, but are not limited to, the following:",e:["FMS.32.2.1 The procedures to follow for taking any part of the system offline.","FMS.32.2.2 Commissioning and testing new branching or modifications.","FMS.32.2.3 The procedure for ordering and filling liquid oxygen.","FMS.32.2.4 Documenting all repairs/alterations/tests/filling logs/consumption."]},
+{c:"FMS.32.3",s:"FMS.32",t:"Compressed medical air is regularly tested for humidity and purity.",f:"دوري"},
+{c:"FMS.32.4",s:"FMS.32",t:"The central medical gas station is in a safe and secure place."},
+{c:"FMS.32.5",s:"FMS.32",t:"The outlets of medical gases in patient care areas are clearly marked with the type of gas and have different connections according to the gas type."},
+{c:"FMS.32.6",s:"FMS.32",t:"All medical gas pipes are clearly marked and labeled for the contents and direction of gas flow."},
+{c:"FMS.32.7",s:"FMS.32",t:"In case of gas pipe repairs or new extensions, outlets are tested for the type of gas to ensure the correct type is delivered through the new pipe. Results of testing are recorded and maintained with engineering and the unit manager."},
+{c:"FMS.32.8",s:"FMS.32",t:"The hospital keeps standby oxygen and medical air cylinders enough for forty eight hours of average consumption.",f:"مخزون 48 ساعة"},
+{c:"FMS.32.9",s:"FMS.32",t:"The gas cylinders are regularly tested for gas type, amount, and any leaks.",f:"دوري"},
+{c:"FMS.32.10",s:"FMS.32",t:"Emergency shut off valves are available in all units and are clearly marked with areas/rooms affected."},
+{c:"FMS.32.11",s:"FMS.32",t:"The hospital dedicates the responsibility of the closure of shut off valves to well-trained individual(s) available in the unit concerned."},
+{c:"FMS.32.12",s:"FMS.32",t:"The hospital has adequate medical gases outlets in the patient care areas as appropriate and these outlets are to be error proof medical gas outlets - preferred to be in accordance with DIN standards related to gases piping, outlets and valves."}
+];
+
+/* ================= Local Static State ================= */
+const KEY="esr_static_local_v1";
+const STATUS_AR={met:"ممتثل",partial:"جزئي",notmet:"غير ممتثل",na:"لا ينطبق",pending:"لم يُقيَّم"};
+const STATUS_EN={met:"Met",partial:"Partially Met",notmet:"Not Met",na:"Not Applicable",pending:"Pending"};
+let state={meta:{hosp:"",assessor:"",date:""},items:{}};
+let filterCh="",filterSt="",q="";
+
+function setSave(msg,mode){
+  const n=document.getElementById("saveBadge");
+  if(!n)return;
+  n.className="save-note";
+  n.textContent=msg||"✓ محفوظ محلياً";
+  if(mode==="err")n.classList.add("err");
+  else n.classList.add("flash");
+}
+function loadLocal(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw){
+      const saved=JSON.parse(raw);
+      state.meta=Object.assign({hosp:"",assessor:"",date:""},saved.meta||{});
+      state.items=saved.items||{};
+    }
+  }catch(e){setSave("⚠ تعذر قراءة الحفظ المحلي","err");}
+  if(!state.meta.date)state.meta.date=new Date().toISOString().slice(0,10);
+}
+function cache(){
+  try{localStorage.setItem(KEY,JSON.stringify(state));setSave("✓ محفوظ محلياً");}
+  catch(e){setSave("⚠ مساحة الحفظ المحلي ممتلئة أو محظورة","err");}
+}
+function it(code){if(!state.items[code])state.items[code]={st:"",ev:"",ow:"",no:""};return state.items[code];}
+function chOf(code){return code.split(".")[0];}
+function markDirty(code){
+  const d=it(code);d.by=state.meta.assessor||"Local";d.at=new Date().toISOString();cache();
+}
+function markDirtyMeta(){cache();}
+function exportBackup(){
+  const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),state},null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="ESR_Backup_"+(state.meta.date||new Date().toISOString().slice(0,10))+".json";
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);
+}
+function importBackup(ev){
+  const file=ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      const imported=data.state||data;
+      if(!imported.items)throw new Error("Invalid backup file");
+      state.meta=Object.assign({hosp:"",assessor:"",date:""},imported.meta||{});
+      state.items=imported.items||{};
+      cache();initMeta();renderAll();setSave("✓ تم استيراد النسخة الاحتياطية");
+    }catch(e){alert("ملف JSON غير صالح أو لا يخص أداة ESR");}
+    ev.target.value="";
+  };
+  reader.readAsText(file);
+}
+function resetAll(){
+  if(!confirm("سيتم مسح كل حالات التقييم والأدلة والملاحظات من هذا المتصفح. هل تريد المتابعة؟"))return;
+  state={meta:{hosp:state.meta.hosp||"",assessor:state.meta.assessor||"",date:state.meta.date||new Date().toISOString().slice(0,10)},items:{}};
+  cache();initMeta();renderAll();
+}
+
+/* ================= Scoring ================= */
+function scoreOf(list){
+  let met=0,partial=0,notmet=0,na=0,pending=0;
+  list.forEach(x=>{const s=(state.items[x.c]||{}).st||"";
+    if(s==="met")met++;else if(s==="partial")partial++;else if(s==="notmet")notmet++;else if(s==="na")na++;else pending++;});
+  const denom=list.length-na;
+  const pct=denom>0?Math.round(100*(met+0.5*partial)/denom):0;
+  return{met,partial,notmet,na,pending,pct,denom};
+}
+
+/* ================= Render ================= */
+function renderHeader(){
+  const sc=scoreOf(ITEMS);
+  document.getElementById("cMet").textContent=sc.met;
+  document.getElementById("cPartial").textContent=sc.partial;
+  document.getElementById("cNotmet").textContent=sc.notmet;
+  document.getElementById("cNa").textContent=sc.na;
+  document.getElementById("cPending").textContent=sc.pending;
+  document.getElementById("donutPct").textContent=sc.pct+"%";
+  const C=2*Math.PI*50;
+  document.getElementById("donutVal").setAttribute("stroke-dasharray",(sc.pct/100*C)+" "+C);
+}
+function renderDash(){
+  const d=document.getElementById("dash");d.innerHTML="";
+  Object.keys(CHAPTERS).forEach(ch=>{
+    const list=ITEMS.filter(x=>chOf(x.c)===ch);
+    const sc=scoreOf(list);
+    const el=document.createElement("div");
+    el.className="chip"+(filterCh===ch?" active":"");
+    el.innerHTML=`<div class="chip-top"><span class="chip-code">${ch}</span><span class="chip-pct" style="color:${sc.pct>=80?'var(--green)':sc.pct>=50?'var(--amber)':'var(--red)'}">${sc.pct}%</span></div>
+      <div class="chip-name">${CHAPTERS[ch].ar} · ${CHAPTERS[ch].en}</div>
+      <div class="bar">
+        <i style="width:${100*sc.met/list.length}%;background:var(--green)"></i>
+        <i style="width:${100*sc.partial/list.length}%;background:var(--amber)"></i>
+        <i style="width:${100*sc.notmet/list.length}%;background:var(--red)"></i>
+        <i style="width:${100*sc.na/list.length}%;background:var(--na)"></i>
+      </div>
+      <div class="chip-cnt">${list.length-sc.pending}/${list.length} assessed</div>`;
+    el.onclick=()=>{filterCh=filterCh===ch?"":ch;renderDash();renderList();};
+    d.appendChild(el);
+  });
+}
+function matches(x){
+  if(filterCh&&chOf(x.c)!==filterCh)return false;
+  const st=(state.items[x.c]||{}).st||"";
+  if(filterSt==="pending"&&st!=="")return false;
+  if(filterSt&&filterSt!=="pending"&&st!==filterSt)return false;
+  if(q){const hay=(x.c+" "+x.t+" "+(x.e||[]).join(" ")).toLowerCase();
+    if(!hay.includes(q))return false;}
+  return true;
+}
+function renderList(){
+  const box=document.getElementById("list");box.innerHTML="";
+  let shown=0;
+  Object.keys(STANDARDS).forEach(std=>{
+    const list=ITEMS.filter(x=>x.s===std&&matches(x));
+    if(!list.length)return;
+    shown+=list.length;
+    const all=ITEMS.filter(x=>x.s===std);
+    const sc=scoreOf(all);
+    const div=document.createElement("div");
+    div.className="std open";
+    const pctColor=sc.pct>=80?'var(--green)':sc.pct>=50?'var(--amber)':'var(--red)';
+    div.innerHTML=`<div class="std-head">
+        <span class="caret">◀</span>
+        <span class="std-code">${std}</span>
+        <span class="std-title">${STANDARDS[std]}</span>
+        <div class="std-mini"><div class="bar">
+          <i style="width:${100*sc.met/all.length}%;background:var(--green)"></i>
+          <i style="width:${100*sc.partial/all.length}%;background:var(--amber)"></i>
+          <i style="width:${100*sc.notmet/all.length}%;background:var(--red)"></i>
+          <i style="width:${100*sc.na/all.length}%;background:var(--na)"></i>
+        </div></div>
+        <span class="std-pct" style="color:${pctColor}">${sc.pct}%</span>
+      </div><div class="std-body"></div>`;
+    div.querySelector(".std-head").onclick=()=>div.classList.toggle("open");
+    const body=div.querySelector(".std-body");
+    list.forEach(x=>body.appendChild(renderItem(x)));
+    box.appendChild(div);
+  });
+  document.getElementById("empty").style.display=shown?"none":"block";
+}
+function renderItem(x){
+  const d=it(x.c);
+  const row=document.createElement("div");
+  row.className="item"+(d.st?" s-"+d.st:"");
+  const els=x.e?`<div class="els">${x.e.map(e=>"• "+e).join("<br>")}</div>`:"";
+  const freq=x.f?`<span class="freq">دوري: ${x.f}</span>`:"";
+  const upd=d.by?`<div class="upd">${d.by} · ${(d.at||"").slice(0,16).replace("T"," ")}</div>`:"";
+  row.innerHTML=`<div class="it-code">${x.c}${freq}</div>
+    <div class="it-text">${x.t}${els}</div>
+    <div class="it-ctrl">
+      <div class="seg">
+        <button data-s="met" class="${d.st==='met'?'on-met':''}">Met</button>
+        <button data-s="partial" class="${d.st==='partial'?'on-partial':''}">Partial</button>
+        <button data-s="notmet" class="${d.st==='notmet'?'on-notmet':''}">Not Met</button>
+        <button data-s="na" class="${d.st==='na'?'on-na':''}">NA</button>
+      </div>
+      <input placeholder="الدليل / Evidence" value="${esc(d.ev)}" data-f="ev">
+      <input placeholder="المسؤول / Owner" value="${esc(d.ow)}" data-f="ow">
+      <textarea placeholder="ملاحظات / Notes" rows="1" data-f="no">${esc(d.no)}</textarea>${upd}
+    </div>`;
+  row.querySelectorAll(".seg button").forEach(b=>{
+    b.onclick=()=>{const s=b.dataset.s;d.st=d.st===s?"":s;markDirty(x.c);
+      renderHeader();renderDash();
+      row.className="item"+(d.st?" s-"+d.st:"");
+      row.querySelectorAll(".seg button").forEach(bb=>bb.className=d.st===bb.dataset.s?"on-"+d.st:"");
+      /* refresh standard-level bar */
+      renderList();};
+  });
+  row.querySelectorAll("[data-f]").forEach(inp=>{
+    inp.oninput=()=>{d[inp.dataset.f]=inp.value;markDirty(x.c);};
+  });
+  return row;
+}
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");}
+
+/* ================= Export ================= */
+function exportXlsx(){
+  const wb=XLSX.utils.book_new();
+  const m=state.meta;
+  /* Sheet 1: Assessment */
+  const rows=[["Chapter","Standard","Code","Sub-Standard Text","Status","الحالة","Evidence","Owner","Notes"]];
+  ITEMS.forEach(x=>{const d=state.items[x.c]||{};
+    const txt=x.t+(x.e?" | "+x.e.join(" | "):"");
+    rows.push([chOf(x.c),x.s,x.c,txt,STATUS_EN[d.st||"pending"],STATUS_AR[d.st||"pending"],d.ev||"",d.ow||"",d.no||""]);});
+  const ws1=XLSX.utils.aoa_to_sheet(rows);
+  ws1["!cols"]=[{wch:8},{wch:8},{wch:11},{wch:80},{wch:14},{wch:12},{wch:30},{wch:18},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws1,"Assessment");
+  /* Sheet 2: Summary */
+  const sm=[["ESR Self-Assessment Summary"],["Hospital",m.hosp||""],["Assessor",m.assessor||""],["Date",m.date||""],[],
+    ["Chapter","Name","Total","Met","Partial","Not Met","NA","Pending","Compliance %"]];
+  Object.keys(CHAPTERS).forEach(ch=>{
+    const list=ITEMS.filter(x=>chOf(x.c)===ch);const sc=scoreOf(list);
+    sm.push([ch,CHAPTERS[ch].en+" / "+CHAPTERS[ch].ar,list.length,sc.met,sc.partial,sc.notmet,sc.na,sc.pending,sc.pct+"%"]);});
+  const tot=scoreOf(ITEMS);
+  sm.push(["TOTAL","",ITEMS.length,tot.met,tot.partial,tot.notmet,tot.na,tot.pending,tot.pct+"%"]);
+  const ws2=XLSX.utils.aoa_to_sheet(sm);
+  ws2["!cols"]=[{wch:10},{wch:42},{wch:7},{wch:7},{wch:8},{wch:9},{wch:6},{wch:9},{wch:13}];
+  XLSX.utils.book_append_sheet(wb,ws2,"Summary");
+  /* Sheet 3: Action Plan (gaps only) */
+  const ap=[["Code","Sub-Standard","Status","Evidence Gap / Notes","Owner","Action Required","Due Date","Progress"]];
+  ITEMS.forEach(x=>{const d=state.items[x.c]||{};
+    if(d.st==="notmet"||d.st==="partial")
+      ap.push([x.c,x.t,STATUS_EN[d.st],(d.no||d.ev||""),d.ow||"","","",""]);});
+  const ws3=XLSX.utils.aoa_to_sheet(ap);
+  ws3["!cols"]=[{wch:11},{wch:70},{wch:14},{wch:32},{wch:18},{wch:32},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws3,"Action Plan");
+  XLSX.writeFile(wb,"ESR_Self_Assessment_"+(m.date||new Date().toISOString().slice(0,10))+".xlsx");
+}
+/* ================= Init ================= */
+function initMeta(){
+  [["mHosp","hosp"],["mAssessor","assessor"],["mDate","date"]].forEach(([id,k])=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    if(document.activeElement!==el)el.value=state.meta[k]||"";
+    el.oninput=()=>{state.meta[k]=el.value;markDirtyMeta();};
+  });
+}
+function renderAll(){renderHeader();renderDash();renderList();}
+document.getElementById("q").oninput=e=>{q=e.target.value.trim().toLowerCase();renderList();};
+document.getElementById("fStatus").onchange=e=>{filterSt=e.target.value;renderList();};
+loadLocal();
+initMeta();
+renderAll();
+console.assert(ITEMS.length===113,"Expected 113 items, got "+ITEMS.length);
+</script>
+</body>
+</html>
